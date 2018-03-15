@@ -1,3 +1,0 @@
-cd Data/blast
-
-psiblast -db pdbaa -query test.fasta -num_iterations 6 -evalue 0.001 -num_threads 16 -out_ascii_pssm pssm1.pssm -out pssm1.txt
