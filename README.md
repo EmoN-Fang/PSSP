@@ -9,11 +9,19 @@ my graduation project - Protein Secondary Structure Prediction
 
 There's 5 types of prediction
 
-1. 9*1 input - 1 output, very basic regrussion
+1. 1*20 input - 1 output, 1d CNN
 2. 7*20 input - 1 output, regular pssm window 
-3. 1*20 input - 1 output, 1d CNN
 4. n*20 input - n output, ResNet??? but size is not identical
 5. n*20 input - n output, Bidirection LSTM
+
+
+train 3 lr model???  this is naive
+how to classify 3 label?
+
+
+one-hot
+PSSM_1
+PSSM_2
 
 
 next week:
