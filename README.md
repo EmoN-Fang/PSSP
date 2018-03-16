@@ -9,15 +9,18 @@ my graduation project - Protein Secondary Structure Prediction
 
 There's 5 types of prediction
 
-1. 1*20 input - 1 output, 1d CNN
-2. 7*20 input - 1 output, regular pssm window 
-4. n*20 input - n output, ResNet??? but size is not identical
-5. n*20 input - n output, Bidirection LSTM
+1. 1*20 input - 1 output, 1d CNN      --- use PSSM_1. PSSM_2
+2. 7*20 input - 1 output, regular pssm window    --- USE PSSM_1, PSSM_2, ONE-HOT
+4. n*20 input - n output, ResNet??? but size is not identical    ---USE PSSM_1, PSSM_2
+5. n*20 input - n output, Bidirection LSTM   ---USE PSSM1, PSSM2, ONE-HOT  
 
 
 train 3 lr model???  this is naive
 how to classify 3 label?
 
+check summer project for embedding
+check CS231n for n label classify
+learn Ng
 
 one-hot
 PSSM_1
