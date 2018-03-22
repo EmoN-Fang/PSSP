@@ -7,7 +7,7 @@ my graduation project - Protein Secondary Structure Prediction
 6 weeks for training models
 1 week for data processing 
 
-There's 5 types of prediction
+There's 4 types of prediction
 
 1. 1*20 input - 1 output, 1d CNN      --- use PSSM_1. PSSM_2
 2. 7*20 input - 1 output, regular pssm window    --- USE PSSM_1, PSSM_2, ONE-HOT
@@ -16,10 +16,9 @@ There's 5 types of prediction
 
 
 train 3 lr model???  this is naive
-how to classify 3 label?
+how to classify 3 label?  check CS231n for n label classify,softmax
 
-check summer project for embedding
-check CS231n for n label classify
+check summer project for embedding  ,pytorch
 learn Ng
 
 one-hot
