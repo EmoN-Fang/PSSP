@@ -3,9 +3,10 @@ import os
 
 
 output_count = 0
-output_x_path = "/home/emon/Data/blast/50/test_input_npy/"
-output_y_path = "/home/emon/Data/blast/50/test_output_npy/"
-input_y_path = "/home/emon/Data/blast/50/test_second_three/"
+output_x_path = "/home/emon/Data/blast/100/pataa_npy/"
+output_y3_path = "/home/emon/Data/blast/100/second_three_npy/"
+output_y8_path = "/home/emon/Data/blast/100/second_eight_npy/"
+input_y_path = "/home/emon/Data/blast/100/second_three/"
 
 def readFile(filepath):
     global output_count
@@ -58,9 +59,46 @@ def Process_3_y(file):
             input_matrix.append([0,0,1])
 
     final_matrix = np.array(input_matrix)
-    out_path = output_y_path + str(output_count) + ".npy"
+    out_path = output_y3_path + str(output_count) + ".npy"
     np.save(out_path, final_matrix)
     g.close()
+
+def Process_8_y(file):
+    global output_count
+    h = open(file, "r")
+
+    lines = h.readlines()
+    #lines_count = len(lines)
+    # print(lines_count)
+    input_matrix = list()
+
+    sec_list = lines[1]
+    #print(sec_list)
+    length = len(sec_list)
+    #print(length)
+    for i in range(length):
+        if sec_list[i] == "G":
+            input_matrix.append([1,0,0,0,0,0,0,0])
+        if sec_list[i] == "H":
+            input_matrix.append([0,1,0,0,0,0,0,0])
+        if sec_list[i] == "I":
+            input_matrix.append([0,0,1,0,0,0,0,0])        
+        if sec_list[i] == "B":
+            input_matrix.append([0,0,0,1,0,0,0,0])
+        if sec_list[i] == "E":
+            input_matrix.append([0,0,0,0,1,0,0,0])
+        if sec_list[i] == "S":
+            input_matrix.append([0,0,0,0,0,1,0,0])        
+        if sec_list[i] == "T":
+            input_matrix.append([0,0,0,0,0,0,1,0])
+        if sec_list[i] == "C":
+            input_matrix.append([0,0,0,0,0,0,0,1])
+
+    final_matrix = np.array(input_matrix)
+    out_path = output_y8_path + str(output_count) + ".npy"
+    np.save(out_path, final_matrix)
+    h.close()
+
 
 
 def Process_pssm(filepath):
@@ -73,6 +111,7 @@ def Process_pssm(filepath):
             readFile(newDir)
             input_y_file = input_y_path + str(os.path.splitext(s)[0])+".txt"
             Process_3_y(input_y_file)
+            Process_8_y(input_y_file)
             output_count += 1
 
-Process_pssm("/home/emon/Data/blast/50/pataa")
+Process_pssm("/home/emon/Data/blast/100/pataa")
