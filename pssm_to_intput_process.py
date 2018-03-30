@@ -3,10 +3,11 @@ import os
 
 
 output_count = 0
-output_x_path = "/home/emon/Data/blast/100/pataa_npy/"
-output_y3_path = "/home/emon/Data/blast/100/second_three_npy/"
-output_y8_path = "/home/emon/Data/blast/100/second_eight_npy/"
-input_y_path = "/home/emon/Data/blast/100/second_three/"
+output_x_path = "/home/emon/Data/blast/50/pataa_npy/"
+output_y3_path = "/home/emon/Data/blast/50/second_three_npy/"
+output_y8_path = "/home/emon/Data/blast/50/second_eight_npy/"
+input_y3_path = "/home/emon/Data/blast/50/second_three/"
+input_y8_path = "/home/emon/Data/blast/50/second_eight/"
 
 def readFile(filepath):
     global output_count
@@ -109,9 +110,10 @@ def Process_pssm(filepath):
         # print(os.path.splitext(s)[0])
         if os.path.splitext(newDir)[1] == ".pssm":
             readFile(newDir)
-            input_y_file = input_y_path + str(os.path.splitext(s)[0])+".txt"
-            Process_3_y(input_y_file)
-            Process_8_y(input_y_file)
+            input_y3_file = input_y3_path + str(os.path.splitext(s)[0])+".txt"
+            Process_3_y(input_y3_file)
+            input_y8_file = input_y8_path + str(os.path.splitext(s)[0])+".txt"
+            Process_8_y(input_y8_file)
             output_count += 1
 
-Process_pssm("/home/emon/Data/blast/100/pataa")
+Process_pssm("/home/emon/Data/blast/50/pataa")
