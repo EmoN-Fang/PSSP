@@ -71,12 +71,14 @@ def argmax(vec):
     _, idx = torch.max(vec, 1)
     return idx
 
+
 # Compute log sum exp in a numerically stable way for the forward algorithm
 def log_sum_exp(vec):
     max_score = vec[0, argmax(vec)]
     max_score_broadcast = max_score.view(1, -1).expand(1, vec.size()[1])
     return max_score + \
         torch.log(torch.sum(torch.exp(vec - max_score_broadcast)))
+
 
 class BiLSTM_CRF(nn.Module):
 
@@ -86,7 +88,7 @@ class BiLSTM_CRF(nn.Module):
 
         # The LSTM takes word embeddings as inputs, and outputs hidden states
         # with dimensionality hidden_dim.
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim // 2, num_layers=1, bidirectional=True)
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim // 2, num_layers=2, bidirectional=True)
 
         self.tag_to_ix = tag_to_ix
         self.tagset_size = len(tag_to_ix)
@@ -113,20 +115,23 @@ class BiLSTM_CRF(nn.Module):
         # Refer to the Pytorch documentation to see exactly
         # why they have this dimensionality.
         # The axes semantics are (num_layers, minibatch_size, hidden_dim)
-        return (torch.zeros(2, 1, self.hidden_dim // 2).cuda(),
-                torch.zeros(2, 1, self.hidden_dim // 2).cuda())
+        return (torch.zeros(4, 1, self.hidden_dim // 2).cuda(),
+                torch.zeros(4, 1, self.hidden_dim // 2).cuda())
 
     def _forward_alg(self, feats):
         # Do the forward algorithm to compute the partition function
         init_alphas = torch.full((1, self.tagset_size), -10000.)
+        # print("init_alphas= ",init_alphas)
         # START_TAG has all of the score.
         init_alphas[0][self.tag_to_ix[START_TAG]] = 0.
-
+        # print("init_alphas= ",init_alphas)
         # Wrap in a variable so that we will get automatic backprop
         forward_var = init_alphas
-
+        print("features=",feats)
+        print("features.size=",feats.size())   #(67,5)
         # Iterate through the sentence
         for feat in feats:
+            # print(feat)
             alphas_t = []  # The forward tensors at this timestep
             for next_tag in range(self.tagset_size):
                 # broadcast the emission score: it is the same regardless of
@@ -144,26 +149,30 @@ class BiLSTM_CRF(nn.Module):
             forward_var = torch.cat(alphas_t).view(1, -1)
         terminal_var = forward_var + self.transitions[self.tag_to_ix[STOP_TAG]]
         alpha = log_sum_exp(terminal_var)
-        # print(alpha)
+        print("*******terminal_var=",terminal_var)  #(1,5)
         return alpha
 
-    # def forward(self, pssm):
-    #     lstm_out, self.hidden = self.lstm(pssm, self.hidden)
-    #     tag_space = self.hidden2tag(lstm_out.view(pssm.size()[0], -1))
-    #     tag_scores = F.log_softmax(tag_space, dim=1)
-    #     return tag_scores
+
 
     def _get_lstm_features(self, pssm):
-        self.hidden = self.init_hidden()
+        # print("pssm=",pssm)
+        # print("pssm.size=",pssm.size())
+        # self.hidden = self.init_hidden()
         lstm_out, self.hidden = self.lstm(pssm, self.hidden)
-        lstm_out = lstm_out.view(pssm.size()[0], self.hidden_dim)
-        lstm_feats = self.hidden2tag(lstm_out)
-        return lstm_feats
+
+        lstm_out = lstm_out.view(pssm.size()[0], -1)
+        print("--------")
+        print("lstm_out=",lstm_out)
+        print("lstm_out.size=",lstm_out.size())   #(67,128)
+        lstm_feats = self.hidden2tag(lstm_out)     
+        return lstm_feats       #(67,5)
 
     def _score_sentence(self, feats, tags):
         # Gives the score of a provided tag sequence
         score = torch.zeros(1).cuda()
         tags = torch.cat([torch.tensor([self.tag_to_ix[START_TAG]], dtype=torch.long).cuda(), tags])
+        # print(tags.size())
+        # print(feats.size())
         for i, feat in enumerate(feats):
             score = score + \
                 self.transitions[tags[i + 1], tags[i]] + feat[tags[i + 1]]
@@ -229,12 +238,15 @@ class BiLSTM_CRF(nn.Module):
 
         # Find the best path, given the features.
         score, tag_seq = self._viterbi_decode(lstm_feats)
+
+        print("-------------------------------------hello-im-score:",score)
+        print("-------------------------------------hello-im-tag_seq:",tag_seq)
         return score, tag_seq
 
 
 training_num = len(X_train)
 EMBEDDING_DIM = 20
-HIDDEN_DIM = 8
+HIDDEN_DIM = 128
 START_TAG = "<START>"
 STOP_TAG = "<STOP>"
 
@@ -249,16 +261,18 @@ optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.8, weight_decay=1e-
 
 
 cost = 0
-for epoch in range(10000):  # again, normally you would NOT do 300 epochs, it is toy data
+for epoch in range(10):  # again, normally you would NOT do 300 epochs, it is toy data
     for i in range(len(X_train)):
         # Step 1. Remember that Pytorch accumulates gradients.
         # We need to clear them out before each instance
         model.zero_grad()
-
+        model.hidden = model.init_hidden()
         # Step 2. Get our inputs ready for the network, that is, turn them into
         # Tensors of word indices.
         pssm = mat_to_float_var(X_train[i])
         targets = mat_to_long_var(Y3_train[i])
+        # print("X_train=",pssm)
+        # print("X_trainSIZE=",pssm.size())
 
         #print(sentence_in)
 
@@ -275,25 +289,25 @@ for epoch in range(10000):  # again, normally you would NOT do 300 epochs, it is
 final_pred = []
 truth_y = []
 
-with torch.no_grad():
-    for i in range(len(X_train)):
-        tag_scores = model(mat_to_float_var(X_train[i]))
-        n_tag_scores = np.array([])
-        for item in tag_scores[1]:
-            n_tag_scores = np.append(n_tag_scores, [item[0].cpu().numpy()])
-        n_tag_scores.astype(int)
+# with torch.no_grad():
+#     for i in range(len(X_train)):
+#         tag_scores = model(mat_to_float_var(X_train[i]))
+#         n_tag_scores = np.array([])
+#         for item in tag_scores[1]:
+#             n_tag_scores = np.append(n_tag_scores, [item[0].cpu().numpy()])
+#         n_tag_scores.astype(int)
 
-        truth = mat_to_long_var(Y3_train[i]).cpu()
-        num_truth = truth.numpy()
+#         truth = mat_to_long_var(Y3_train[i]).cpu()
+#         num_truth = truth.numpy()
 
-        final_pred = np.hstack((final_pred, n_tag_scores))
-        truth_y = np.hstack((truth_y, num_truth))
+#         final_pred = np.hstack((final_pred, n_tag_scores))
+#         truth_y = np.hstack((truth_y, num_truth))
 
-    print(final_pred)
-    print(truth_y)
+#     print(final_pred)
+#     print(truth_y)
 
-    accur = np.sum(np.equal(final_pred, truth_y))/truth_y.shape[0]
+#     accur = np.sum(np.equal(final_pred, truth_y))/truth_y.shape[0]
 
-    print(accur)
+#     print(accur)
 
     # print(tag_scores)
