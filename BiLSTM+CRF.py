@@ -75,6 +75,8 @@ def argmax(vec):
 # Compute log sum exp in a numerically stable way for the forward algorithm
 def log_sum_exp(vec):
     max_score = vec[0, argmax(vec)]
+    # print("$$$$vec=",vec)
+    # print("hello-vec=",vec[0])
     max_score_broadcast = max_score.view(1, -1).expand(1, vec.size()[1])
     return max_score + \
         torch.log(torch.sum(torch.exp(vec - max_score_broadcast)))
@@ -100,7 +102,7 @@ class BiLSTM_CRF(nn.Module):
         # Matrix of transition parameters.  Entry i,j is the score of
         # transitioning *to* i *from* j.
         self.transitions = nn.Parameter(
-            torch.randn(self.tagset_size, self.tagset_size))
+            torch.randn(self.tagset_size, self.tagset_size)+1000)
 
         # These two statements enforce the constraint that we never transfer
         # to the start tag and we never transfer from the stop tag
@@ -127,8 +129,8 @@ class BiLSTM_CRF(nn.Module):
         # print("init_alphas= ",init_alphas)
         # Wrap in a variable so that we will get automatic backprop
         forward_var = init_alphas
-        print("features=",feats)
-        print("features.size=",feats.size())   #(67,5)
+        # print("features=",feats)
+        # print("features.size=",feats.size())   #(67,5)
         # Iterate through the sentence
         for feat in feats:
             # print(feat)
@@ -140,16 +142,23 @@ class BiLSTM_CRF(nn.Module):
                 # the ith entry of trans_score is the score of transitioning to
                 # next_tag from i
                 trans_score = self.transitions[next_tag].view(1, -1)
+                # print("next_tag =", next_tag)
+                # print("trans_score=", trans_score)
+                # print("emit_score= ", emit_score)
                 # The ith entry of next_tag_var is the value for the
                 # edge (i -> next_tag) before we do log-sum-exp
                 next_tag_var = forward_var.cuda() + trans_score.cuda() + emit_score.cuda()
                 # The forward variable for this tag is log-sum-exp of all the
                 # scores.
                 alphas_t.append(log_sum_exp(next_tag_var).view(1))
+                # print("alphas_t=", alphas_t)
             forward_var = torch.cat(alphas_t).view(1, -1)
+            # print("forward_var=", forward_var)
         terminal_var = forward_var + self.transitions[self.tag_to_ix[STOP_TAG]]
         alpha = log_sum_exp(terminal_var)
         print("*******terminal_var=",terminal_var)  #(1,5)
+        print("~~~~~~~~~transitioningons=", self.transitions)
+        # self.transitions = torch.div(self.transitions, 10)
         return alpha
 
 
@@ -158,6 +167,7 @@ class BiLSTM_CRF(nn.Module):
         # print("pssm=",pssm)
         # print("pssm.size=",pssm.size())
         # self.hidden = self.init_hidden()
+        # print("pssm.size= ", pssm.size())
         lstm_out, self.hidden = self.lstm(pssm, self.hidden)
 
         lstm_out = lstm_out.view(pssm.size()[0], -1)
@@ -246,7 +256,7 @@ class BiLSTM_CRF(nn.Module):
 
 training_num = len(X_train)
 EMBEDDING_DIM = 20
-HIDDEN_DIM = 128
+HIDDEN_DIM = 64
 START_TAG = "<START>"
 STOP_TAG = "<STOP>"
 
@@ -261,7 +271,7 @@ optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.8, weight_decay=1e-
 
 
 cost = 0
-for epoch in range(10):  # again, normally you would NOT do 300 epochs, it is toy data
+for epoch in range(100):  # again, normally you would NOT do 300 epochs, it is toy data
     for i in range(len(X_train)):
         # Step 1. Remember that Pytorch accumulates gradients.
         # We need to clear them out before each instance
@@ -289,25 +299,25 @@ for epoch in range(10):  # again, normally you would NOT do 300 epochs, it is to
 final_pred = []
 truth_y = []
 
-# with torch.no_grad():
-#     for i in range(len(X_train)):
-#         tag_scores = model(mat_to_float_var(X_train[i]))
-#         n_tag_scores = np.array([])
-#         for item in tag_scores[1]:
-#             n_tag_scores = np.append(n_tag_scores, [item[0].cpu().numpy()])
-#         n_tag_scores.astype(int)
+with torch.no_grad():
+    for i in range(len(X_train)):
+        tag_scores = model(mat_to_float_var(X_train[i]))
+        n_tag_scores = np.array([])
+        for item in tag_scores[1]:
+            n_tag_scores = np.append(n_tag_scores, [item[0].cpu().numpy()])
+        n_tag_scores.astype(int)
 
-#         truth = mat_to_long_var(Y3_train[i]).cpu()
-#         num_truth = truth.numpy()
+        truth = mat_to_long_var(Y3_train[i]).cpu()
+        num_truth = truth.numpy()
 
-#         final_pred = np.hstack((final_pred, n_tag_scores))
-#         truth_y = np.hstack((truth_y, num_truth))
+        final_pred = np.hstack((final_pred, n_tag_scores))
+        truth_y = np.hstack((truth_y, num_truth))
 
-#     print(final_pred)
-#     print(truth_y)
+    print("fianl_pred=",final_pred)
+    print("truth_y=",truth_y)
 
-#     accur = np.sum(np.equal(final_pred, truth_y))/truth_y.shape[0]
+    accur = np.sum(np.equal(final_pred, truth_y))/truth_y.shape[0]
 
-#     print(accur)
+    print(accur)
 
     # print(tag_scores)
