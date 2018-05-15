@@ -12,39 +12,39 @@ output_folder = "/home/emon/Data/blast/100/LSTM_torch/"
 
 
 X_train = []
-for train_count in range(0, 1000//500):
+for train_count in range(0, 1000):
     tmp_path = input_x_path + str(train_count) + ".npy"
     tmp_x = np.load(tmp_path)
     X_train.append(tmp_x)
 
 Y3_train = []
-for train_count in range(0, 1000//500):
+for train_count in range(0, 1000):
     tmp_path = input_y3_path + str(train_count) + ".npy"
     tmp_y3 = np.load(tmp_path)
     Y3_train.append(tmp_y3)
 
 
 Y8_train = []
-for train_count in range(0, 1000//500):
+for train_count in range(0, 1000):
     tmp_path = input_y8_path + str(train_count) + ".npy"
     tmp_y8 = np.load(tmp_path)
     Y8_train.append(tmp_y8)
 
 X_test = []
-for test_count in range(1000//500, 1100//500):
+for test_count in range(1000, 1100):
     tmp_path = input_x_path + str(test_count) + ".npy"
     tmp_x = np.load(tmp_path)
     X_test.append(tmp_x)
 
 
 Y3_test = []
-for test_count in range(1000//500, 1100//500):
+for test_count in range(1000, 1100):
     tmp_path = input_y3_path + str(test_count) + ".npy"
     tmp_y3 = np.load(tmp_path)
     Y3_test.append(tmp_y3)
 
 Y8_test = []
-for test_count in range(1000//500, 1100//500):
+for test_count in range(1000, 1100):
     tmp_path = input_y8_path + str(test_count) + ".npy"
     tmp_y8 = np.load(tmp_path)
     Y8_test.append(tmp_y8)
@@ -102,7 +102,8 @@ class BiLSTM_CRF(nn.Module):
         # Matrix of transition parameters.  Entry i,j is the score of
         # transitioning *to* i *from* j.
         self.transitions = nn.Parameter(
-            torch.randn(self.tagset_size, self.tagset_size)+1000)
+            torch.randn(self.tagset_size, self.tagset_size))
+
 
         # These two statements enforce the constraint that we never transfer
         # to the start tag and we never transfer from the stop tag
@@ -129,11 +130,11 @@ class BiLSTM_CRF(nn.Module):
         # print("init_alphas= ",init_alphas)
         # Wrap in a variable so that we will get automatic backprop
         forward_var = init_alphas
-        # print("features=",feats)
+        # print("～～～～～～～～～～～～～～～～～～～～～～features=",feats)
         # print("features.size=",feats.size())   #(67,5)
         # Iterate through the sentence
         for feat in feats:
-            # print(feat)
+            # print("feat=",feat)
             alphas_t = []  # The forward tensors at this timestep
             for next_tag in range(self.tagset_size):
                 # broadcast the emission score: it is the same regardless of
@@ -156,8 +157,8 @@ class BiLSTM_CRF(nn.Module):
             # print("forward_var=", forward_var)
         terminal_var = forward_var + self.transitions[self.tag_to_ix[STOP_TAG]]
         alpha = log_sum_exp(terminal_var)
-        print("*******terminal_var=",terminal_var)  #(1,5)
-        print("~~~~~~~~~transitioningons=", self.transitions)
+        # print("*******terminal_var=",terminal_var)  #(1,5)
+        # print("~~~~~~~~~transitioningons=", self.transitions)
         # self.transitions = torch.div(self.transitions, 10)
         return alpha
 
@@ -171,9 +172,9 @@ class BiLSTM_CRF(nn.Module):
         lstm_out, self.hidden = self.lstm(pssm, self.hidden)
 
         lstm_out = lstm_out.view(pssm.size()[0], -1)
-        print("--------")
-        print("lstm_out=",lstm_out)
-        print("lstm_out.size=",lstm_out.size())   #(67,128)
+        # print("--------")
+        # print("lstm_out=",lstm_out)
+        # print("lstm_out.size=",lstm_out.size())   #(67,128)
         lstm_feats = self.hidden2tag(lstm_out)     
         return lstm_feats       #(67,5)
 
@@ -237,9 +238,9 @@ class BiLSTM_CRF(nn.Module):
         feats = self._get_lstm_features(sentence)
         forward_score = self._forward_alg(feats)
         gold_score = self._score_sentence(feats, tags)
-        print("f_score=",forward_score)
-        print("g_score=",gold_score)
-        print("----------delta=",forward_score - gold_score)
+        # print("f_score=",forward_score)
+        # print("g_score=",gold_score)
+        # print("----------delta=",forward_score - gold_score)
         return (forward_score - gold_score)
 
     def forward(self, sentence):  # dont confuse this with _forward_alg above.
@@ -249,8 +250,8 @@ class BiLSTM_CRF(nn.Module):
         # Find the best path, given the features.
         score, tag_seq = self._viterbi_decode(lstm_feats)
 
-        print("-------------------------------------hello-im-score:",score)
-        print("-------------------------------------hello-im-tag_seq:",tag_seq)
+        # print("-------------------------------------hello-im-score:",score)
+        # print("-------------------------------------hello-im-tag_seq:",tag_seq)
         return score, tag_seq
 
 
@@ -271,7 +272,7 @@ optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.8, weight_decay=1e-
 
 
 cost = 0
-for epoch in range(100):  # again, normally you would NOT do 300 epochs, it is toy data
+for epoch in range(600):  # again, normally you would NOT do 300 epochs, it is toy data
     for i in range(len(X_train)):
         # Step 1. Remember that Pytorch accumulates gradients.
         # We need to clear them out before each instance
@@ -287,7 +288,10 @@ for epoch in range(100):  # again, normally you would NOT do 300 epochs, it is t
         #print(sentence_in)
 
         loss = model.neg_log_likelihood(pssm, targets).cuda()
+        if epoch % 20 == 0:
+            print("loss",i,"=",loss)
         loss.backward()
+        torch.nn.utils.clip_grad_norm(model.parameters(), 1e-1)
         optimizer.step()
 
         cost = loss
@@ -300,14 +304,14 @@ final_pred = []
 truth_y = []
 
 with torch.no_grad():
-    for i in range(len(X_train)):
-        tag_scores = model(mat_to_float_var(X_train[i]))
+    for i in range(len(X_test)):
+        tag_scores = model(mat_to_float_var(X_test[i]))
         n_tag_scores = np.array([])
         for item in tag_scores[1]:
             n_tag_scores = np.append(n_tag_scores, [item[0].cpu().numpy()])
         n_tag_scores.astype(int)
 
-        truth = mat_to_long_var(Y3_train[i]).cpu()
+        truth = mat_to_long_var(Y3_test[i]).cpu()
         num_truth = truth.numpy()
 
         final_pred = np.hstack((final_pred, n_tag_scores))
