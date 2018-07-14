@@ -80,6 +80,7 @@ def argmax(vec):
     return idx
 
 
+
 class LSTMTagger(nn.Module):
 
     def __init__(self, embedding_dim, hidden_dim, mid_dim, tagset_size):
@@ -113,9 +114,14 @@ class LSTMTagger(nn.Module):
         tag_scores = F.log_softmax(tag_space, dim=1)
         return tag_scores
 
+# def loss_function(tag_scores, targets):
+
+
+weight_v = [1,1,10]
+weight_v = mat_to_long_var(weight_v).float()
 
 model = LSTMTagger(EMBEDDING_DIM, HIDDEN_DIM, MID_DIM, y_size).cuda()
-loss_function = nn.NLLLoss().cuda()
+loss_function = nn.NLLLoss(weight = weight_v).cuda()
 optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.8, weight_decay=1e-5)
 
 cost = 0
@@ -133,11 +139,13 @@ for epoch in range(1000):  # again, normally you would NOT do 300 epochs, it is 
         # Tensors of word indices.
         pssm = mat_to_float_var(X_train[i])
         targets = mat_to_long_var(Y3_train[i])
+        # print("target ",i," = ",targets)
 
         #print(sentence_in)
 
         # Step 3. Run our forward pass.
         tag_scores = model(pssm)
+        # print("tag_scores ",i," = ",tag_scores)
         # print(tag_scores)
         # print(targets)
         # print(tag_scores.shape) 
@@ -153,6 +161,7 @@ for epoch in range(1000):  # again, normally you would NOT do 300 epochs, it is 
         print(loss)
 
 # See what the scores are after training
+
 
 model.eval()
 final_pred = []
@@ -183,6 +192,7 @@ with torch.no_grad():
 
     print(freq)
     print(len(truth_y))
+
     # print(tag_scores)
 # parameters = model(X_train, Y3_train, X_test, Y3_test, num_class=3)
 time_end = time.time()

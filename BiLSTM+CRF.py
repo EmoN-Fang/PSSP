@@ -12,20 +12,20 @@ output_folder = "/home/emon/Data/blast/100/LSTM_torch/"
 
 
 X_train = []
-for train_count in range(0, 1000):
+for train_count in range(0, 500):
     tmp_path = input_x_path + str(train_count) + ".npy"
     tmp_x = np.load(tmp_path)
     X_train.append(tmp_x)
 
 Y3_train = []
-for train_count in range(0, 1000):
+for train_count in range(0, 500):
     tmp_path = input_y3_path + str(train_count) + ".npy"
     tmp_y3 = np.load(tmp_path)
     Y3_train.append(tmp_y3)
 
 
 Y8_train = []
-for train_count in range(0, 1000):
+for train_count in range(0, 500):
     tmp_path = input_y8_path + str(train_count) + ".npy"
     tmp_y8 = np.load(tmp_path)
     Y8_train.append(tmp_y8)
@@ -268,11 +268,11 @@ tag_to_ix = {"0": 0, "1": 1, "2": 2, START_TAG: 3, STOP_TAG: 4}
 
 
 model = BiLSTM_CRF(tag_to_ix, EMBEDDING_DIM, HIDDEN_DIM).cuda()
-optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.8, weight_decay=1e-6)
+optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-6)
 
 
 cost = 0
-for epoch in range(600):  # again, normally you would NOT do 300 epochs, it is toy data
+for epoch in range(1000):  # again, normally you would NOT do 300 epochs, it is toy data
     for i in range(len(X_train)):
         # Step 1. Remember that Pytorch accumulates gradients.
         # We need to clear them out before each instance
@@ -288,10 +288,10 @@ for epoch in range(600):  # again, normally you would NOT do 300 epochs, it is t
         #print(sentence_in)
 
         loss = model.neg_log_likelihood(pssm, targets).cuda()
-        if epoch % 20 == 0:
+        if epoch % 100 == 0:
             print("loss",i,"=",loss)
         loss.backward()
-        torch.nn.utils.clip_grad_norm(model.parameters(), 1e-1)
+        torch.nn.utils.clip_grad_norm(model.parameters(), 1)
         optimizer.step()
 
         cost = loss

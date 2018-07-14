@@ -3,10 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import collections
-
-import time
-time_start = time.time()
+from torch.nn.utils import clip_grad_norm
 
 torch.manual_seed(1)
 input_x_path = "/home/emon/Data/blast/100/pataa_npy/"
@@ -57,6 +54,7 @@ for test_count in range(1000, 1100):
 training_num = len(X_train)
 EMBEDDING_DIM = 20
 HIDDEN_DIM = 128
+A_DIM = 64
 MID_DIM = 32
 y_size = 3
 
@@ -82,17 +80,17 @@ def argmax(vec):
 
 class LSTMTagger(nn.Module):
 
-    def __init__(self, embedding_dim, hidden_dim, mid_dim, tagset_size):
+    def __init__(self, embedding_dim, hidden_dim,a_dim, mid_dim, tagset_size):
         super(LSTMTagger, self).__init__()
         self.hidden_dim = hidden_dim
 
         # The LSTM takes word embeddings as inputs, and outputs hidden states
         # with dimensionality hidden_dim.
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim // 2, num_layers=3, dropout = 0.1, bidirectional=True)
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim // 2, num_layers=3, bidirectional=True)
 
         # The linear layer that maps from hidden state space to tag space
-        self.hidden2mid = nn.Linear(hidden_dim, mid_dim)
-
+        self.hidden2A = nn.Linear(hidden_dim, a_dim)
+        self.A2mid = nn.Linear(a_dim, mid_dim)
         self.mid2tag = nn.Linear(mid_dim, tagset_size)
 
         self.hidden = self.init_hidden()
@@ -108,15 +106,16 @@ class LSTMTagger(nn.Module):
     def forward(self, pssm):
         lstm_out, self.hidden = self.lstm(pssm, self.hidden)
         new_input = lstm_out.view(pssm.size()[0], -1)
-        mid_space = self.hidden2mid(new_input)
+        a_space = self.hidden2A(new_input)
+        mid_space = self.A2mid(a_space)
         tag_space = self.mid2tag(mid_space)
         tag_scores = F.log_softmax(tag_space, dim=1)
         return tag_scores
 
 
-model = LSTMTagger(EMBEDDING_DIM, HIDDEN_DIM, MID_DIM, y_size).cuda()
+model = LSTMTagger(EMBEDDING_DIM, HIDDEN_DIM,A_DIM, MID_DIM, y_size).cuda()
 loss_function = nn.NLLLoss().cuda()
-optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.8, weight_decay=1e-5)
+optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.8, weight_decay=1e-6)
 
 cost = 0
 for epoch in range(1000):  # again, normally you would NOT do 300 epochs, it is toy data
@@ -147,6 +146,7 @@ for epoch in range(1000):  # again, normally you would NOT do 300 epochs, it is 
         #  calling optimizer.step()
         loss = loss_function(tag_scores, targets)
         loss.backward()
+        clip_grad_norm(model.parameters(), max_norm=10)
         optimizer.step()
         cost = loss
     if epoch % 10 == 0:
@@ -154,7 +154,7 @@ for epoch in range(1000):  # again, normally you would NOT do 300 epochs, it is 
 
 # See what the scores are after training
 
-model.eval()
+
 final_pred = []
 truth_y = []
 with torch.no_grad():
@@ -174,16 +174,6 @@ with torch.no_grad():
 
     accur = np.sum(np.equal(final_pred, truth_y))/truth_y.shape[0]
 
-    print("accur = ", accur)
+    print(accur)
 
-    freq = collections.defaultdict(lambda :0)
-    for i in range(len(truth_y)):
-        if final_pred[i] != truth_y[i]:
-            freq[truth_y[i]] += 1
-
-    print(freq)
-    print(len(truth_y))
     # print(tag_scores)
-# parameters = model(X_train, Y3_train, X_test, Y3_test, num_class=3)
-time_end = time.time()
-print('totally time cost', time_end - time_start)
