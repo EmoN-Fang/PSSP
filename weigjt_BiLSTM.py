@@ -16,39 +16,39 @@ output_folder = "/home/emon/Data/blast/100/LSTM_torch/"
 
 
 X_train = []
-for train_count in range(0, 1000):
+for train_count in range(0, 3000):
     tmp_path = input_x_path + str(train_count) + ".npy"
     tmp_x = np.load(tmp_path)
     X_train.append(tmp_x)
 
 Y3_train = []
-for train_count in range(0, 1000):
+for train_count in range(0, 3000):
     tmp_path = input_y3_path + str(train_count) + ".npy"
     tmp_y3 = np.load(tmp_path)
     Y3_train.append(tmp_y3)
 
 
 Y8_train = []
-for train_count in range(0, 1000):
+for train_count in range(0, 3000):
     tmp_path = input_y8_path + str(train_count) + ".npy"
     tmp_y8 = np.load(tmp_path)
     Y8_train.append(tmp_y8)
 
 X_test = []
-for test_count in range(1000, 1100):
+for test_count in range(3000, 3300):
     tmp_path = input_x_path + str(test_count) + ".npy"
     tmp_x = np.load(tmp_path)
     X_test.append(tmp_x)
 
 
 Y3_test = []
-for test_count in range(1000, 1100):
+for test_count in range(3000, 3300):
     tmp_path = input_y3_path + str(test_count) + ".npy"
     tmp_y3 = np.load(tmp_path)
     Y3_test.append(tmp_y3)
 
 Y8_test = []
-for test_count in range(1000, 1100):
+for test_count in range(3000, 3300):
     tmp_path = input_y8_path + str(test_count) + ".npy"
     tmp_y8 = np.load(tmp_path)
     Y8_test.append(tmp_y8)
@@ -117,7 +117,7 @@ class LSTMTagger(nn.Module):
 # def loss_function(tag_scores, targets):
 
 
-weight_v = [1,1,10]
+weight_v = [5,1,10]
 weight_v = mat_to_long_var(weight_v).float()
 
 model = LSTMTagger(EMBEDDING_DIM, HIDDEN_DIM, MID_DIM, y_size).cuda()
@@ -125,7 +125,7 @@ loss_function = nn.NLLLoss(weight = weight_v).cuda()
 optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.8, weight_decay=1e-5)
 
 cost = 0
-for epoch in range(1000):  # again, normally you would NOT do 300 epochs, it is toy data
+for epoch in range(1500):  # again, normally you would NOT do 300 epochs, it is toy data
     for i in range(len(X_train)):
         # Step 1. Remember that Pytorch accumulates gradients.
         # We need to clear them out before each instance
@@ -163,6 +163,16 @@ for epoch in range(1000):  # again, normally you would NOT do 300 epochs, it is 
 # See what the scores are after training
 
 
+pred_file = "/home/emon/Data/blast/100/BiLSTM_torch/pred_file.txt"
+truth_file = "/home/emon/Data/blast/100/BiLSTM_torch/truth_file.txt"
+one_file = "/home/emon/Data/blast/100/BiLSTM_torch/one_file.txt"
+
+o = open(one_file, "w")
+p = open(pred_file, "w")
+t = open(truth_file, "w")
+
+
+
 model.eval()
 final_pred = []
 truth_y = []
@@ -175,6 +185,19 @@ with torch.no_grad():
         num_tag_lable = tag_label.numpy()
         num_truth = truth.numpy()
         # print(num_truth)
+        o.write("> pred_y:"+'\n')
+        o.write(str(num_tag_lable))
+        o.write('\r\n')
+        o.write("> truth_y:"+'\n')
+        o.write(str(num_truth))
+        o.write('\r\n')
+        p.write("> pred_y:"+'\n')
+        p.write(str(num_tag_lable))
+        p.write('\r\n')
+        t.write("> truth_y:"+'\n')
+        t.write(str(num_truth))
+        t.write('\r\n')
+
         final_pred = np.hstack((final_pred, num_tag_lable))
         truth_y = np.hstack((truth_y, num_truth))
 
@@ -192,6 +215,10 @@ with torch.no_grad():
 
     print(freq)
     print(len(truth_y))
+
+o.close()
+p.close()
+t.close()
 
     # print(tag_scores)
 # parameters = model(X_train, Y3_train, X_test, Y3_test, num_class=3)
