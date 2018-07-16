@@ -16,39 +16,39 @@ output_folder = "/home/emon/Data/blast/100/LSTM_torch/"
 
 
 X_train = []
-for train_count in range(0, 1000):
+for train_count in range(0, 100):
     tmp_path = input_x_path + str(train_count) + ".npy"
     tmp_x = np.load(tmp_path)
     X_train.append(tmp_x)
 
 Y3_train = []
-for train_count in range(0, 1000):
+for train_count in range(0, 100):
     tmp_path = input_y3_path + str(train_count) + ".npy"
     tmp_y3 = np.load(tmp_path)
     Y3_train.append(tmp_y3)
 
 
 Y8_train = []
-for train_count in range(0, 1000):
+for train_count in range(0, 100):
     tmp_path = input_y8_path + str(train_count) + ".npy"
     tmp_y8 = np.load(tmp_path)
     Y8_train.append(tmp_y8)
 
 X_test = []
-for test_count in range(1000, 1100):
+for test_count in range(100, 110):
     tmp_path = input_x_path + str(test_count) + ".npy"
     tmp_x = np.load(tmp_path)
     X_test.append(tmp_x)
 
 
 Y3_test = []
-for test_count in range(1000, 1100):
+for test_count in range(100, 110):
     tmp_path = input_y3_path + str(test_count) + ".npy"
     tmp_y3 = np.load(tmp_path)
     Y3_test.append(tmp_y3)
 
 Y8_test = []
-for test_count in range(1000, 1100):
+for test_count in range(100, 110):
     tmp_path = input_y8_path + str(test_count) + ".npy"
     tmp_y8 = np.load(tmp_path)
     Y8_test.append(tmp_y8)
@@ -119,7 +119,7 @@ loss_function = nn.NLLLoss().cuda()
 optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.8, weight_decay=1e-5)
 
 cost = 0
-for epoch in range(1000):  # again, normally you would NOT do 300 epochs, it is toy data
+for epoch in range(100):  # again, normally you would NOT do 300 epochs, it is toy data
     for i in range(len(X_train)):
         # Step 1. Remember that Pytorch accumulates gradients.
         # We need to clear them out before each instance
@@ -157,6 +157,10 @@ for epoch in range(1000):  # again, normally you would NOT do 300 epochs, it is 
 model.eval()
 final_pred = []
 truth_y = []
+
+pred_file = "/home/emon/Data/blast/100/BiLSTM_torch/pred_file.txt"
+g = open(pred_file, "w")
+
 with torch.no_grad():
     for i in range(len(X_test)):
         tag_scores = model(mat_to_float_var(X_test[i]))
@@ -166,6 +170,13 @@ with torch.no_grad():
         num_tag_lable = tag_label.numpy()
         num_truth = truth.numpy()
         # print(num_truth)
+        g.write("> pred_y:"+'\n')
+        g.write(str(num_tag_lable))
+        g.write('\r\n')
+        g.write("> truth_y:"+'\n')
+        g.write(str(num_truth))
+        g.write('\r\n')
+
         final_pred = np.hstack((final_pred, num_tag_lable))
         truth_y = np.hstack((truth_y, num_truth))
 
@@ -183,6 +194,13 @@ with torch.no_grad():
 
     print(freq)
     print(len(truth_y))
+
+g.close()
+
+
+
+
+
     # print(tag_scores)
 # parameters = model(X_train, Y3_train, X_test, Y3_test, num_class=3)
 time_end = time.time()
